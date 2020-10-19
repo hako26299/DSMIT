@@ -1,0 +1,106 @@
+# This is the project foe Practical Machine Learning Week-4
+# With gadgets such as Jawbone Up, Nike FuelBand and Fitbit, a huge quantity of data can now be obtained reasonably cheaply on personal operation. This types of instruments belong to the quantified self-movement – a community of fans who frequently test themselves in order to enhance their wellbeing, find behavioural designs or to find technical fits. 
+# One thing you do often is to calculate how much of a certain task you do, but you hardly quantify how much.
+# The goal would be to use details on the belt, wrist, arm and dumbell accelerometers of six participants in this experiment. The barbell lifting was demanded in 5 separate forms in the right and the wrong direction.
+# There ae 2 sources of Data sets here: one is for training and other is for testing respectively [https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv] [https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv]
+# The actual data for the assignment was obtained from  [http://groupware.les.inf.puc-rio.br/har]
+
+library(caret) # Here, the required packages are installed
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(RGtk2)
+library(rattle)
+library(randomForest)
+library(gbm)
+
+# In the next two lines, data is directly taken from the web, then trained and tested, this is step 1 
+url_train <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" 
+url_test <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+data_training <- read.csv(url(url_train))
+data_testing <- read.csv(url(url_test))
+
+dim(data_training)
+dim(data_testing)
+
+# Step 2 involves involves the cleaning of data
+
+notzerovar <- nearzerovar(data_training) #Here, variables which have nearly zero variables are removed for convinience
+
+training_data_org <- data_training[,-notzerovar]
+testing_data_org <- data_testing[,-notzerovar]
+
+dim(training_data_org)
+
+dim(testing_data_org)
+
+val_col_na <- sapply(training_data_org, function(x) mean(is.na(x))) > 0.95
+
+training_data_org <- training_data_org[,val_col_na == FALSE]
+testing_data_org <- org_testing_data[,val_col_na == FALSE]
+
+dim(training_data_org)
+dim(testing_data_org)
+
+training_data_org <- training_data_org[,8:59]
+testing_data_org <- testing_data_org[,8:59]
+
+dim(training_data_org)
+dim(testing_data_org)
+
+colnames(training_data_org)
+colnames(testing_data_org)
+
+# In Step 3, the data is partitioned on the basis of the requirement stated by the project
+
+
+TrainIn <- createDataPartition(training_data_org$classe, p=0.6, list=FALSE)
+training <- training_data_org[TrainIn,]
+testing <- training_data_org[-TrainIn,]
+
+dim(training)
+dim(testing)
+
+# Step 4, A decision tree model is created for the representation
+
+DT_modfit <- train(classe ~ ., data = training, method="rpart")
+DT_prediction <- predict(DT_modfit, testing)
+confusionMatrix(DT_prediction, testing$classe)
+
+rpart.plot(DT_modfit$finalModel, roundint=FALSE)
+
+# Step 5, where a Random Forest Model is created
+
+RF_modfit <- train(classe ~ ., data = training, method = "rf", ntree = 100)
+RF_prediction <- predict(RF_modfit, testing)
+RF_pred_conf <- confusionMatrix(RF_prediction, testing$classe)
+RF_pred_conf
+plot(RF_pred_conf$table, col = RF_pred_conf$byClass, 
+     main = paste("Random Forest - Accuracy Level =",
+                  round(RF_pred_conf$overall['Accuracy'], 4)))
+
+# Step 6, Gradient Boosting Model is used here
+
+Modfit_GBM <- train(classe ~ ., data = training, method = "gbm", verbose = FALSE)
+Modfit_GBM$finalModel
+
+Prediction_GBM <- predict(Modfit_GBM, testing)
+
+Conf_Pred_GBM <- confusionMatrix(Prediction_GBM, testing$classe)
+Conf_Pred_GBM
+
+plot(Conf_Pred_GBM$table, col = Conf_Pred_GBM$byClass, 
+     main = paste("Gradient Boosting - Accuracy Level =",
+                  round(Conf_Pred_GBM$overall['Accuracy'], 4)))
+
+# We have to look at how the validity data set in and model was expected. 
+# We do not accept the Decision Tree model because the degree of estimation was unsatisfactory. Comparisons are rendered for random forest and gradient boosting approaches only.
+
+RF_pred_conf$overall
+Conf_Pred_GBM$overall 
+
+#Conclusion
+
+Final_RF_prediction <- predict(RF_modfit, testing_data_org )
+Final_RF_prediction
